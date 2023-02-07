@@ -2,8 +2,9 @@ package openKeeper
 
 import (
 	"fmt"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
+	"strings"
 )
 
 func (s *ZkClient) watch() {
@@ -11,24 +12,25 @@ func (s *ZkClient) watch() {
 		select {
 		case event := <-s.eventChan:
 			switch event.Type {
+			case zk.EventSession:
 			case zk.EventNodeCreated:
-				fmt.Println("EventNodeCreated", event.Path, event.Err, event.Server, event.State)
 			case zk.EventNodeChildrenChanged:
-				fmt.Println("EventNodeChildrenChanged", event.Path, event.Err, event.Server, event.State)
-
+				l := strings.Split(event.Path, "/")
+				s.lock.Lock()
+				delete(s.rpcLocalCache, l[len(l)-1])
+				fmt.Println("update", s.rpcLocalCache, s.node)
+				s.lock.Unlock()
 			case zk.EventNodeDataChanged:
-				fmt.Println("EventNodeDataChanged", event.Path, event.Err, event.Server, event.State)
-
 			case zk.EventNodeDeleted:
-				fmt.Println("EventNodeDeleted", event.Path, event.Err, event.Server, event.State)
-
+				fmt.Println("de")
+			case zk.EventNotWatching:
 			}
 		}
 	}
 }
 
 func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (conns []*grpc.ClientConn, err error) {
-	path := s.zkRoot + "/" + serviceName
+	path := s.getPath(serviceName)
 	childNodes, _, err := s.conn.Children(path)
 	if err != nil {
 		if err == zk.ErrNoNode {
@@ -45,7 +47,7 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 			}
 			return nil, err
 		}
-		conn, err := grpc.Dial(string(data))
+		conn, err := grpc.Dial(string(data), opts...)
 		if err == nil {
 			conns = append(conns, conn)
 		}
@@ -56,10 +58,18 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grpc.ClientConn, error) {
 	conns, ok := s.rpcLocalCache[serviceName]
 	if !ok {
-		conns, err := s.GetConnsRemote(serviceName)
+		fmt.Println("remote", s.node)
+		var err error
+		conns, err = s.GetConnsRemote(serviceName, opts...)
 		if err != nil {
 			return nil, err
 		}
+		_, _, _, err = s.conn.ChildrenW(s.getPath(serviceName))
+		if err != nil {
+			return nil, err
+		}
+		s.lock.Lock()
+		defer s.lock.Unlock()
 		s.rpcLocalCache[serviceName] = conns
 	}
 	return conns, nil

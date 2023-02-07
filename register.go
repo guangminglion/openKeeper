@@ -1,61 +1,56 @@
 package openKeeper
 
 import (
-	"errors"
-	"fmt"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
 )
 
-func (s *ZkClient) Register(rpcRegisterName, host string, port int, opts ...grpc.DialOption) error {
-	if s.isRegister {
-		return nil
+func (s *ZkClient) createRpcNode(rpcRegisterName string) error {
+	isExist, _, err := s.conn.Exists(s.getPath(rpcRegisterName))
+	if err != nil {
+		return err
 	}
+	if !isExist {
+		_, err = s.conn.Create(s.getPath(rpcRegisterName), []byte(rpcRegisterName), 0, zk.WorldACL(zk.PermAll))
+		if err != nil && err != zk.ErrNodeExists {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ZkClient) Register(rpcRegisterName, host string, port int, opts ...grpc.DialOption) error {
+	if err := s.createRpcNode(rpcRegisterName); err != nil {
+		return err
+	}
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	if err := s.ensureName(rpcRegisterName); err != nil {
 		return err
 	}
 	addr := s.getAddr(host, port)
-	conn, err := grpc.Dial(addr, opts...)
+	_, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		return err
 	}
-	node, err := s.conn.CreateProtectedEphemeralSequential(s.getPath(rpcRegisterName), []byte(addr), zk.WorldACL(zk.PermAll))
+
+	node, err := s.conn.CreateProtectedEphemeralSequential(s.getPath(rpcRegisterName)+"/"+addr+"_", []byte(addr), zk.WorldACL(zk.PermAll))
 	if err != nil {
 		return err
 	}
-	s.rpcRegisterName = rpcRegisterName
-	s.rpcRegisterAddr = addr
-	s.isRegister = true
+	go s.watch()
 	s.node = node
-	s.rpcLocalCache[rpcRegisterName] = append(s.rpcLocalCache[rpcRegisterName], conn)
-	return err
+	return nil
 }
 
 func (s *ZkClient) UnRegister() error {
-	if !s.isRegister {
-		return errors.New(fmt.Sprintf("service %s is not register", s.rpcRegisterName))
-	}
 	s.lock.Lock()
-	addresses, ok := s.rpcLocalCache[s.rpcRegisterName]
-	if !ok || len(addresses) == 0 {
-		return errors.New(fmt.Sprintf("service %s is not register, could not find conns in Local", s.rpcRegisterName))
+	defer s.lock.Unlock()
+	err := s.conn.Delete(s.node, -1)
+	if err != nil {
+		return err
 	}
-	// delete our hash of the service
-	for index, node := range s.rpcLocalCache[s.rpcRegisterName] {
-		if s.rpcRegisterAddr == node.Target() {
-			err := s.conn.Delete(s.getPath(node.Target()), -1)
-			if err != nil {
-				return err
-			}
-			if index == len(s.rpcLocalCache[s.rpcRegisterName])-1 {
-				s.rpcLocalCache[s.rpcRegisterName] = s.rpcLocalCache[s.rpcRegisterName][:index]
-			} else {
-				s.rpcLocalCache[s.rpcRegisterName] = append(s.rpcLocalCache[s.rpcRegisterName][:index], s.rpcLocalCache[s.rpcRegisterName][index+1:]...)
-			}
-		}
-
-	}
-	s.lock.Unlock()
-	s.isRegister = false
+	s.rpcLocalCache = map[string][]*grpc.ClientConn{}
+	s.node = ""
 	return nil
 }
