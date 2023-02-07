@@ -75,14 +75,10 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 	return conns, nil
 }
 
-func (s *ZkClient) GetConnStrategy(serviceName string, strategy func(slice []*grpc.ClientConn) int, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func (s *ZkClient) GetConn(serviceName string, strategy func(slice []*grpc.ClientConn) int, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	conns, err := s.GetConns(serviceName, opts...)
 	if len(conns) > 0 {
 		return conns[strategy(conns)], nil
 	}
 	return nil, err
-}
-
-func (s *ZkClient) GetConn(serviceName string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	return s.GetConnStrategy(serviceName, func(slice []*grpc.ClientConn) int { return 0 }, opts...)
 }

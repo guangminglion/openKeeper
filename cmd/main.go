@@ -68,18 +68,26 @@ func main() {
 		fmt.Println("user2", conn.Target())
 	}
 
+	conns, err = client2.GetConns("user", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err.Error())
+	}
+	for _, conn := range conns {
+		fmt.Println("GetConns user0:", conn.Target())
+	}
+
 	err = client.UnRegister()
 	if err != nil {
 		panic(err.Error())
 	}
 	time.Sleep(time.Second * 3)
 
-	conns, err = client2.GetConns("msg", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conns, err = client2.GetConns("user", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err.Error())
 	}
 	for _, conn := range conns {
-		fmt.Println("GetConns msg:", conn.Target())
+		fmt.Println("GetConns user1:", conn.Target())
 	}
 
 	err = client2.UnRegister()

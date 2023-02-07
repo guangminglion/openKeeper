@@ -1,4 +1,4 @@
-module openKeeper
+module github.com/OpenIMSDK/openKeeper
 
 go 1.16
 
