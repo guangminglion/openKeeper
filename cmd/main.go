@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/OpenIMSDK/openKeeper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"openKeeper"
 	"time"
 )
 
@@ -82,7 +82,7 @@ func main() {
 	}
 	time.Sleep(time.Second * 3)
 
-	conns, err = client2.GetConns("user", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conns, err = client2.GetConns("msg", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err.Error())
 	}

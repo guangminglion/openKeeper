@@ -1,7 +1,6 @@
 package openKeeper
 
 import (
-	"fmt"
 	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
 	"net"
@@ -49,7 +48,6 @@ func (s *ZkClient) Close() {
 func (s *ZkClient) ensureAndCreate(node string) error {
 	exists, _, err := s.conn.Exists(s.zkRoot)
 	if err != nil {
-		fmt.Println("xad")
 		return err
 	}
 	if !exists {

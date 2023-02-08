@@ -1,7 +1,6 @@
 package openKeeper
 
 import (
-	"fmt"
 	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
 	"strings"
@@ -18,11 +17,9 @@ func (s *ZkClient) watch() {
 				l := strings.Split(event.Path, "/")
 				s.lock.Lock()
 				delete(s.rpcLocalCache, l[len(l)-1])
-				fmt.Println("update", s.rpcLocalCache, s.node)
 				s.lock.Unlock()
 			case zk.EventNodeDataChanged:
 			case zk.EventNodeDeleted:
-				fmt.Println("de")
 			case zk.EventNotWatching:
 			}
 		}
@@ -58,7 +55,6 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grpc.ClientConn, error) {
 	conns, ok := s.rpcLocalCache[serviceName]
 	if !ok {
-		fmt.Println("remote", s.node)
 		var err error
 		conns, err = s.GetConnsRemote(serviceName, opts...)
 		if err != nil {
