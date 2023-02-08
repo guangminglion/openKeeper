@@ -98,6 +98,10 @@ func main() {
 	if err != nil {
 
 	}
+
+	for {
+		time.Sleep(time.Second * 10)
+	}
 }
 
 func UnRegisterAll() {

@@ -1,6 +1,7 @@
 package openKeeper
 
 import (
+	"fmt"
 	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
 	"net"
@@ -9,6 +10,8 @@ import (
 	"time"
 )
 
+const defaultFreq = time.Second * 5
+
 type ZkClient struct {
 	zkServers []string
 	zkRoot    string
@@ -16,6 +19,7 @@ type ZkClient struct {
 	conn      *zk.Conn
 	eventChan <-chan zk.Event
 	node      string
+	ticker    *time.Ticker
 
 	lock          sync.Mutex
 	rpcLocalCache map[string][]*grpc.ClientConn
@@ -34,10 +38,19 @@ func NewClient(zkServers []string, zkRoot string, timeout int, userName, passwor
 	client.zkRoot += zkRoot
 	client.eventChan = eventChan
 	client.conn = conn
+	client.ticker = time.NewTicker(defaultFreq)
 	if err := client.ensureRoot(); err != nil {
 		client.Close()
 		return nil, err
 	}
+	go func() {
+		for {
+			select {
+			case <-client.ticker.C:
+				client.refresh()
+			}
+		}
+	}()
 	return client, nil
 }
 
@@ -57,6 +70,15 @@ func (s *ZkClient) ensureAndCreate(node string) error {
 		}
 	}
 	return nil
+}
+
+func (s *ZkClient) refresh() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	for rpcName, _ := range s.rpcLocalCache {
+		s.rpcLocalCache[rpcName] = []*grpc.ClientConn{}
+	}
+	fmt.Println("refresh")
 }
 
 func (s *ZkClient) GetZkConn() *zk.Conn {

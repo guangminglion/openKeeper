@@ -16,7 +16,9 @@ func (s *ZkClient) watch() {
 			case zk.EventNodeChildrenChanged:
 				l := strings.Split(event.Path, "/")
 				s.lock.Lock()
-				delete(s.rpcLocalCache, l[len(l)-1])
+				if len(l) > 1 {
+					delete(s.rpcLocalCache, l[len(l)-1])
+				}
 				s.lock.Unlock()
 			case zk.EventNodeDataChanged:
 			case zk.EventNodeDeleted:
