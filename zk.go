@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const defaultFreq = time.Second * 5
+const defaultFreq = time.Minute * 30
 
 type ZkClient struct {
 	zkServers []string
@@ -51,6 +51,7 @@ func NewClient(zkServers []string, zkRoot string, timeout int, userName, passwor
 			}
 		}
 	}()
+	go client.watch()
 	return client, nil
 }
 
@@ -97,9 +98,8 @@ func (s *ZkClient) ensureRoot() error {
 	return s.ensureAndCreate(s.zkRoot)
 }
 
-func (s *ZkClient) ensureName(name string) error {
-	path := s.zkRoot + "/" + name
-	return s.ensureAndCreate(path)
+func (s *ZkClient) ensureName(rpcRegisterName string) error {
+	return s.ensureAndCreate(s.getPath(rpcRegisterName))
 }
 
 func (s *ZkClient) getPath(rpcRegisterName string) string {

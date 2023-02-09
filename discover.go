@@ -73,10 +73,28 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 	return conns, nil
 }
 
-func (s *ZkClient) GetConn(serviceName string, strategy func(slice []*grpc.ClientConn) int, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func (s *ZkClient) GetConn(serviceName string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	robin := Robin{}
+	return s.GetConnStrategy(serviceName, robin.Robin, opts...)
+}
+
+func (s *ZkClient) GetConnStrategy(serviceName string, strategy func(slice []*grpc.ClientConn) int, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	conns, err := s.GetConns(serviceName, opts...)
 	if len(conns) > 0 {
 		return conns[strategy(conns)], nil
 	}
 	return nil, err
+}
+
+type Robin struct {
+	next int
+}
+
+func (r *Robin) Robin(slice []*grpc.ClientConn) int {
+	index := r.next
+	r.next += 1
+	if r.next > len(slice)-1 {
+		r.next = 0
+	}
+	return index
 }
