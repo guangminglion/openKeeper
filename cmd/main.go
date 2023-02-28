@@ -23,11 +23,11 @@ func main() {
 		panic(err.Error())
 	}
 
-	err = client2.UnRegister()
+	err = client.UnRegister()
 	if err != nil {
 
 	}
-	err = client.UnRegister()
+	err = client2.UnRegister()
 	if err != nil {
 
 	}

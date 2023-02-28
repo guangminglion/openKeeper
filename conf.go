@@ -1,15 +1,27 @@
 package openKeeper
 
-import "github.com/go-zookeeper/zk"
+import (
+	"github.com/go-zookeeper/zk"
+)
 
-const ConfName = "openIMConf"
-
-func (s *ZkClient) RegisterConf(conf []byte) error {
-	_, err := s.conn.Create(s.getPath(ConfName), conf, 0, zk.WorldACL(zk.PermAll))
-	return err
+func (s *ZkClient) RegisterConf2Registry(key string, conf []byte) error {
+	exists, _, err := s.conn.Exists(s.getPath(key))
+	if err != nil {
+		return err
+	}
+	if exists {
+		if err := s.conn.Delete(s.getPath(key), 0); err != nil {
+			return err
+		}
+	}
+	_, err = s.conn.Create(s.getPath(key), conf, 0, zk.WorldACL(zk.PermAll))
+	if err != zk.ErrNodeExists {
+		return err
+	}
+	return nil
 }
 
-func (s *ZkClient) LoadConf() ([]byte, error) {
-	bytes, _, err := s.conn.Get(s.getPath(ConfName))
+func (s *ZkClient) GetConfFromRegistry(key string) ([]byte, error) {
+	bytes, _, err := s.conn.Get(s.getPath(key))
 	return bytes, err
 }

@@ -1,7 +1,6 @@
 package openKeeper
 
 import (
-	"fmt"
 	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
 	"net"
@@ -43,14 +42,7 @@ func NewClient(zkServers []string, zkRoot string, timeout int, userName, passwor
 		client.Close()
 		return nil, err
 	}
-	go func() {
-		for {
-			select {
-			case <-client.ticker.C:
-				client.refresh()
-			}
-		}
-	}()
+	go client.refresh()
 	go client.watch()
 	return client, nil
 }
@@ -60,7 +52,7 @@ func (s *ZkClient) Close() {
 }
 
 func (s *ZkClient) ensureAndCreate(node string) error {
-	exists, _, err := s.conn.Exists(s.zkRoot)
+	exists, _, err := s.conn.Exists(node)
 	if err != nil {
 		return err
 	}
@@ -74,12 +66,16 @@ func (s *ZkClient) ensureAndCreate(node string) error {
 }
 
 func (s *ZkClient) refresh() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	for rpcName, _ := range s.rpcLocalCache {
-		s.rpcLocalCache[rpcName] = []*grpc.ClientConn{}
+	for {
+		select {
+		case <-s.ticker.C:
+			s.lock.Lock()
+			for rpcName, _ := range s.rpcLocalCache {
+				s.rpcLocalCache[rpcName] = []*grpc.ClientConn{}
+			}
+			s.lock.Unlock()
+		}
 	}
-	fmt.Println("refresh")
 }
 
 func (s *ZkClient) GetZkConn() *zk.Conn {
