@@ -22,7 +22,11 @@ func TestRegisterDiscover(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-
+	defer func() {
+		client2.UnRegister()
+		client.UnRegister()
+		client3.UnRegister()
+	}()
 	user := "user"
 	host := "127.0.0.1"
 	err = client.Register(user, host, 1001, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -69,9 +73,4 @@ func TestRegisterDiscover(t *testing.T) {
 	if len(conns) != 1 {
 		t.Fatalf("error len: %d, %v", len(conns), conns)
 	}
-	defer func() {
-		client2.UnRegister()
-		client.UnRegister()
-		client3.UnRegister()
-	}()
 }
