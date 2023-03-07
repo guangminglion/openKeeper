@@ -22,6 +22,7 @@ type ZkClient struct {
 
 	lock          sync.Mutex
 	rpcLocalCache map[string][]*grpc.ClientConn
+	options       []grpc.DialOption
 }
 
 func NewClient(zkServers []string, zkRoot string, timeout int, userName, password string) (*ZkClient, error) {
@@ -104,4 +105,8 @@ func (s *ZkClient) getPath(rpcRegisterName string) string {
 
 func (s *ZkClient) getAddr(host string, port int) string {
 	return net.JoinHostPort(host, strconv.Itoa(port))
+}
+
+func (s *ZkClient) AddOption(opts ...grpc.DialOption) {
+	s.options = append(s.options, opts...)
 }
