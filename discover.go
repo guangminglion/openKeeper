@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var DefaultOptions []grpc.DialOption
+
 func (s *ZkClient) watch() {
 	for {
 		select {
@@ -84,6 +86,10 @@ func (s *ZkClient) GetConnStrategy(serviceName string, strategy func(slice []*gr
 		return conns[strategy(conns)], nil
 	}
 	return nil, err
+}
+
+func (s *ZkClient) GetDefaultConn(serviceName string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	return s.GetConn(serviceName, append(DefaultOptions, opts...)...)
 }
 
 type Robin struct {
