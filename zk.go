@@ -20,16 +20,16 @@ type ZkClient struct {
 	node      string
 	ticker    *time.Ticker
 
-	lock          sync.RWMutex
-	rpcLocalCache map[string][]*grpc.ClientConn
-	options       []grpc.DialOption
+	lock       sync.RWMutex
+	localConns map[string][]*grpc.ClientConn
+	options    []grpc.DialOption
 }
 
 func NewClient(zkServers []string, zkRoot string, timeout int, userName, password string) (*ZkClient, error) {
 	client := &ZkClient{
-		zkServers:     zkServers,
-		zkRoot:        "/",
-		rpcLocalCache: make(map[string][]*grpc.ClientConn, 0),
+		zkServers:  zkServers,
+		zkRoot:     "/",
+		localConns: make(map[string][]*grpc.ClientConn, 0),
 	}
 	conn, eventChan, err := zk.Connect(zkServers, time.Duration(timeout)*time.Second)
 	if err != nil {
@@ -71,8 +71,8 @@ func (s *ZkClient) refresh() {
 		select {
 		case <-s.ticker.C:
 			s.lock.Lock()
-			for rpcName, _ := range s.rpcLocalCache {
-				s.rpcLocalCache[rpcName] = []*grpc.ClientConn{}
+			for rpcName, _ := range s.localConns {
+				s.localConns[rpcName] = []*grpc.ClientConn{}
 			}
 			s.lock.Unlock()
 		}

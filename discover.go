@@ -17,7 +17,7 @@ func (s *ZkClient) watch() {
 				l := strings.Split(event.Path, "/")
 				s.lock.Lock()
 				if len(l) > 1 {
-					delete(s.rpcLocalCache, l[len(l)-1])
+					delete(s.localConns, l[len(l)-1])
 				}
 				s.lock.Unlock()
 			case zk.EventNodeDataChanged:
@@ -56,7 +56,7 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 
 func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grpc.ClientConn, error) {
 	s.lock.RLock()
-	conns, ok := s.rpcLocalCache[serviceName]
+	conns, ok := s.localConns[serviceName]
 	if !ok {
 		s.lock.RUnlock()
 		var err error
@@ -70,7 +70,7 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 		}
 		s.lock.Lock()
 		defer s.lock.Unlock()
-		s.rpcLocalCache[serviceName] = conns
+		s.localConns[serviceName] = conns
 	} else {
 		s.lock.RUnlock()
 	}

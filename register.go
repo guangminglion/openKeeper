@@ -31,7 +31,7 @@ func (s *ZkClient) UnRegister() error {
 	if err != nil {
 		return err
 	}
-	s.rpcLocalCache = map[string][]*grpc.ClientConn{}
+	s.localConns = map[string][]*grpc.ClientConn{}
 	s.node = ""
 	return nil
 }
