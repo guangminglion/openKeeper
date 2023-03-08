@@ -56,9 +56,9 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 
 func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grpc.ClientConn, error) {
 	s.lock.RLock()
-	defer s.lock.RUnlock()
 	conns, ok := s.rpcLocalCache[serviceName]
 	if !ok {
+		s.lock.RUnlock()
 		var err error
 		conns, err = s.GetConnsRemote(serviceName, opts...)
 		if err != nil {
@@ -71,6 +71,8 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 		s.lock.Lock()
 		defer s.lock.Unlock()
 		s.rpcLocalCache[serviceName] = conns
+	} else {
+		s.lock.RUnlock()
 	}
 	return conns, nil
 }
