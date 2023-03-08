@@ -20,7 +20,7 @@ type ZkClient struct {
 	node      string
 	ticker    *time.Ticker
 
-	lock          sync.Mutex
+	lock          sync.RWMutex
 	rpcLocalCache map[string][]*grpc.ClientConn
 	options       []grpc.DialOption
 }
