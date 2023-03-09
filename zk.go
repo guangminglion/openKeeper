@@ -31,7 +31,7 @@ func NewClient(zkServers []string, zkRoot string, timeout int, userName, passwor
 		zkRoot:     "/",
 		localConns: make(map[string][]*grpc.ClientConn, 0),
 	}
-	conn, eventChan, err := zk.Connect(zkServers, time.Duration(timeout)*time.Second)
+	conn, eventChan, err := zk.Connect(zkServers, time.Duration(timeout)*time.Second, zk.WithLogInfo(false))
 	if err != nil {
 		return nil, err
 	}
