@@ -85,5 +85,10 @@ func TestRegisterDiscover(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
+	client4.refresh()
+	conns, err = client4.GetConns("msg")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 	fmt.Println(conns)
 }
