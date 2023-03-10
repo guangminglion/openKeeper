@@ -1,10 +1,13 @@
 package openKeeper
 
 import (
+	"errors"
 	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
 	"strings"
 )
+
+var ErrConnIsNil = errors.New("conn is nil")
 
 func (s *ZkClient) watch() {
 	for {
@@ -73,6 +76,9 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 		s.localConns[serviceName] = conns
 	} else {
 		s.lock.RUnlock()
+	}
+	if len(conns) == 0 {
+		return nil, ErrConnIsNil
 	}
 	return conns, nil
 }

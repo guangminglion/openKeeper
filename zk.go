@@ -72,7 +72,7 @@ func (s *ZkClient) refresh() {
 		case <-s.ticker.C:
 			s.lock.Lock()
 			for rpcName, _ := range s.localConns {
-				s.localConns[rpcName] = []*grpc.ClientConn{}
+				delete(s.localConns, rpcName)
 			}
 			s.lock.Unlock()
 		}

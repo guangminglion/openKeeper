@@ -1,6 +1,7 @@
 package openKeeper
 
 import (
+	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"testing"
@@ -73,4 +74,16 @@ func TestRegisterDiscover(t *testing.T) {
 	if len(conns) != 1 {
 		t.Fatalf("error len: %d, %v", len(conns), conns)
 	}
+
+	client4, err := NewClient([]string{addr}, root, 1, "", "")
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	//client4.Register("msg", host, 9023)
+
+	conns, err = client4.GetConns("msg", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	fmt.Println(conns)
 }
