@@ -1,13 +1,16 @@
 package openKeeper
 
 import (
-	"errors"
+	"strings"
+
+	"github.com/pkg/errors"
+
 	"github.com/go-zookeeper/zk"
 	"google.golang.org/grpc"
-	"strings"
 )
 
 var ErrConnIsNil = errors.New("conn is nil")
+var ErrConnIsNilButLocalNotNil = errors.New("conn is nil, but local is not nil")
 
 func (s *ZkClient) watch() {
 	for {
@@ -35,23 +38,22 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 	path := s.getPath(serviceName)
 	childNodes, _, err := s.conn.Children(path)
 	if err != nil {
-		if err == zk.ErrNoNode {
-			return nil, nil
-		}
-		return nil, err
+		return nil, errors.Wrap(err, "get children error")
 	}
 	for _, child := range childNodes {
 		fullPath := path + "/" + child
 		data, _, err := s.conn.Get(fullPath)
 		if err != nil {
-			if err == zk.ErrNoNode {
-				continue
-			}
-			return nil, err
+			// if err == zk.ErrNoNode {
+			// 	continue
+			// }
+			return nil, errors.Wrap(err, "get children error")
 		}
 		conn, err := grpc.Dial(string(data), opts...)
 		if err == nil {
 			conns = append(conns, conn)
+		} else {
+			return nil, errors.Wrap(err, "dial error")
 		}
 	}
 	return conns, nil
@@ -69,7 +71,7 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 		}
 		_, _, _, err = s.conn.ChildrenW(s.getPath(serviceName))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "children watch error")
 		}
 		s.lock.Lock()
 		defer s.lock.Unlock()
@@ -78,7 +80,12 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 		s.lock.RUnlock()
 	}
 	if len(conns) == 0 {
-		return nil, ErrConnIsNil
+		var err error
+		err = ErrConnIsNil
+		if len(s.localConns) > 0 {
+			err = ErrConnIsNilButLocalNotNil
+		}
+		return nil, err
 	}
 	return conns, nil
 }
