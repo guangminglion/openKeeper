@@ -44,22 +44,23 @@ func (s *ZkClient) GetConnsRemote(serviceName string, opts ...grpc.DialOption) (
 		fullPath := path + "/" + child
 		data, _, err := s.conn.Get(fullPath)
 		if err != nil {
-			// if err == zk.ErrNoNode {
-			// 	continue
-			// }
+			if err == zk.ErrNoNode {
+				return nil, errors.Wrap(err, "this is zk ErrNoNode")
+			}
 			return nil, errors.Wrap(err, "get children error")
 		}
 		conn, err := grpc.Dial(string(data), opts...)
 		if err == nil {
 			conns = append(conns, conn)
 		} else {
-			return nil, errors.Wrap(err, "dial error")
+			return nil, errors.Wrap(err, "grpc dial error")
 		}
 	}
 	return conns, nil
 }
 
 func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grpc.ClientConn, error) {
+	opts = append(s.options, opts...)
 	s.lock.RLock()
 	conns, ok := s.localConns[serviceName]
 	if !ok {
@@ -92,7 +93,7 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 
 func (s *ZkClient) GetConn(serviceName string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 	robin := Robin{}
-	return s.GetConnStrategy(serviceName, robin.Robin, append(s.options, opts...)...)
+	return s.GetConnStrategy(serviceName, robin.Robin, opts...)
 }
 
 func (s *ZkClient) GetConnStrategy(serviceName string, strategy func(slice []*grpc.ClientConn) int, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
