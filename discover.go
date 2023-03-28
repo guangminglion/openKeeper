@@ -1,6 +1,7 @@
 package openKeeper
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -81,12 +82,7 @@ func (s *ZkClient) GetConns(serviceName string, opts ...grpc.DialOption) ([]*grp
 		s.lock.RUnlock()
 	}
 	if len(conns) == 0 {
-		var err error
-		err = ErrConnIsNil
-		if len(s.localConns) > 0 {
-			err = ErrConnIsNilButLocalNotNil
-		}
-		return nil, err
+		return nil, fmt.Errorf("no conn for service %s, local conn is %v", serviceName, s.localConns)
 	}
 	return conns, nil
 }
